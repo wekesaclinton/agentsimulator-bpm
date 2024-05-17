@@ -77,6 +77,7 @@ The simulated logs (10 logs) as well as train and test log splits are then store
 
 ## Evaluation
 The simulation results can be evaluated using the evaluate_simulation_extended.ipynb notebook.
+The raw event logs as well as all simulated event logs for the 9 mentioned processes can be found in this [Google Drive folder](https://drive.google.com/drive/folders/1D0jgBcPYNw-yBFyc_Ro3a681_c-BzM0u?usp=sharing).
 
 ## Authors
 Lukas Kirchdorfer, Robert Blümel, Timotheus Kampik, Han van der Aa, Heiner Stuckenschmidt
