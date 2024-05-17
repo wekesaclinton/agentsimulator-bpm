@@ -2,18 +2,17 @@
 This is the supplementary GitHub repository of the paper: "AgentSimulator: An Agent-based Approach for Data-driven Business Process Simulation".
 
 ## Prerequisites
-To execute the code, you need to create an environment and install the following packages
-- mesa
-- pm4py
-- pandas
-- numpy
-- scipy
-- polars
+To execute the code, you need to create an environment (e.g., with conda create -n myenv python=3.9) and install the following packages
+- pip install mesa==2.1.2
+- pip install pm4py
+- pip install polars
+- pip install pyarrow
+- pip install log_distance_measures
 
 ## How to run the AgentSimulator
 To run the script MAS_Simulation.py you need to specify the following parameters:
 
---log_path : path to the entire log which should be stored in the folder raw_data
+--log_path : path to the entire log which you need to store in the folder raw_data
 
 --case_id : name of the case_id column
 
@@ -30,6 +29,7 @@ To run the script MAS_Simulation.py you need to specify the following parameters
 --central_orchestration : whether the MAS is centrally orchestrated or agents have autonomous handover behavior (True or False)
 
 Commands to run the datasets evaluated in our paper:
+
 Loan Application:
 ```
 python MAS_Simulation.py --log_path raw_data/LoanApp.csv.gz --case_id case_id --activity_name activity --resource_name resource --end_timestamp end_time --start_timestamp start_time --extr_delays False --central_orchestration False
