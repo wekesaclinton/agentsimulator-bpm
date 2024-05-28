@@ -81,5 +81,20 @@ The simulated logs (10 logs) as well as train and test log splits are then store
 The simulation results can be evaluated using the evaluate_simulation_extended.ipynb notebook.
 The raw event logs as well as all simulated event logs for the 9 mentioned processes can be found in this [Google Drive folder](https://drive.google.com/drive/folders/1D0jgBcPYNw-yBFyc_Ro3a681_c-BzM0u?usp=sharing).
 
+## Additional Results 
+The following table complements the results mentioned in the paper and reports the AgentSimulator results using orchestrated handovers. The underlying simulated log files can also be found in the Google Drive folder.
+
+| Log        | NGD  | AED  | CED  | RED  | CTD |
+| -----------|:----:| ----:|:----:| ----:|----:|
+| Loan Appl. |0.08|2.76      |0.22|1.36|1.50|
+| P2P     | 0.25    | 1098.16  |1.07|674.83|528.99|
+| CVS     |0.12|94.99|7.46|88.66|111.07|
+| Conf. 1000 |0.26|135.70|1.66|13.22|23.16|
+| Conf. 2000 |0.25|236.91|1.49|9.30|17.73|
+| ACR |0.37|281.58|7.21|27.32|77.26|
+| Production |0.62|61.80|5.69|17.77|23.45|
+| BPI12W |0.15|81.52|1.89|49.61|92.99|
+| BPI17W |0.19|221.49|1.79|50.01|54.82|
+
 ## Authors
 Lukas Kirchdorfer, Robert Blümel, Timotheus Kampik, Han van der Aa, Heiner Stuckenschmidt
