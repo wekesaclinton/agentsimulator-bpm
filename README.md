@@ -1,7 +1,7 @@
 # AgentSimulator
 This is the supplementary GitHub repository of the paper: "AgentSimulator: An Agent-based Approach for Data-driven Business Process Simulation".
 
-![](https://github.com/lukaskirchdorfer/AgentSimulator/blob/main/AgentSimulator.png)
+![](https://github.com/lukaskirchdorfer/AgentSimulator/blob/main/AgentSim.png)
 
 ## Prerequisites
 To execute the code, you need to create an environment (e.g., with conda create -n myenv python=3.9) and install the following packages
