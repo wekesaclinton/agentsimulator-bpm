@@ -399,11 +399,12 @@ def compute_activity_duration_per_role(activity_durations_dict, roles):
                 )
                 act_duration_distribution_per_role[role][activity] = duration_distribution
 
-    print(f"Dist per role: {act_duration_distribution_per_role}")
+    # print(f"Dist per role: {act_duration_distribution_per_role}")
     for key, value in act_duration_distribution_per_role.items():
         for k, v in value.items():
             if not isinstance(v, list):
-                print(f"{key}: {k}, {v.type.value}, {v.mean}, {v.std}")
+                pass
+                # print(f"{key}: {k}, {v.type.value}, {v.mean}, {v.std}")
         
     return act_duration_distribution_per_role
 
@@ -973,10 +974,10 @@ class ResourceAgent(Agent):
             self.calendar = self.model.calendars[self.resource].intervals_to_json()
         else:
             self.calendar = next((ids['calendar'] for role, ids in self.model.roles.items() if self.resource in ids['agents']), None)
-            print("role calendar")
-            print(self.calendar)
+            # print("role calendar")
+            # print(self.calendar)
         self.timer = timer
-        print(f"agent {self.resource} has calendar {self.calendar}")
+        # print(f"agent {self.resource} has calendar {self.calendar}")
         self.occupied_times = []
 
     def step(self, last_possible_agent=False, parallel_activity=False, current_timestamp=None, perform_multitask=False):
@@ -1001,14 +1002,14 @@ class ResourceAgent(Agent):
                               additional_agent_counter=additional_activity_index, perform_multitask=perform_multitask)
 
     def perform_task(self, current_timestamp, activity_duration, activity, last_possible_agent, additional_act=False, additional_agent_counter=0, perform_multitask=False):
-        print(f"current timestamp: {current_timestamp}")
+        # print(f"current timestamp: {current_timestamp}")
         if activity in self.timer.keys():
             waiting_time_distribution = timers[activity]
             waiting_time = sample_from_distribution(distribution=waiting_time_distribution)
         else:
             waiting_time = 0
         current_timestamp += pd.Timedelta(seconds=waiting_time)
-        print(f"activity duration: {activity_duration}")
+        # print(f"activity duration: {activity_duration}")
 
 
         # check if the activity can be performed in multi-tasking style
@@ -1037,7 +1038,7 @@ class ResourceAgent(Agent):
                 self.contractor_agent.case.current_timestamp = current_timestamp + pd.Timedelta(seconds=activity_duration)
                 # add activity to case list to keep track of performed activities per case
                 self.contractor_agent.case.add_activity_to_case(activity)
-                print(f"Activity performed: {activity}")
+                # print(f"Activity performed: {activity}")
 
                 # set that activity is performed
                 self.contractor_agent.activity_performed = True
@@ -1059,17 +1060,17 @@ class ResourceAgent(Agent):
                                     'TimeStep': self.model.schedule.steps,
                                     })
             else:
-                print(f"#######agent {self.resource} is free but time not within calendar")
+                # print(f"#######agent {self.resource} is free but time not within calendar")
                 if last_possible_agent: # then increase timer by x seconds to try to get an available agent later
                     # move timestamp until agent is available again according to calendar
                     self.contractor_agent.case.current_timestamp = self.set_time_to_next_availability_when_not_in_calendar(current_timestamp, activity_duration)
-                    print(f"set timestamp until agent is available again: {self.contractor_agent.case.current_timestamp}")
+                    # print(f"set timestamp until agent is available again: {self.contractor_agent.case.current_timestamp}")
                     if additional_act == True:
                         self.model.additional_activity_index += 1
                 else:
                     pass # first try if one of the other possible agents is available
         else:
-            print(f"agent {self.resource} is busy when trying to perform task {activity} until {self.is_busy_until}")
+            # print(f"agent {self.resource} is busy when trying to perform task {activity} until {self.is_busy_until}")
             if last_possible_agent: # then increase timer by x seconds to try to get an available agent later
                 self.set_current_time_to_next_available_slot()
                 if additional_act == True:
@@ -1101,11 +1102,11 @@ class ResourceAgent(Agent):
             if end > current_time:
                 self.contractor_agent.case.current_timestamp = end
                 new_time_set = True
-                print(f"moved time to: {end}")
+                # print(f"moved time to: {end}")
                 break
         if new_time_set == False:
             self.contractor_agent.case.current_timestamp += pd.Timedelta(seconds=60)
-            print(f"moved time by 60 seconds")
+            # print(f"moved time by 60 seconds")
         
     def is_within_calendar(self, current_timestamp, activity_duration):
         """
@@ -1388,7 +1389,7 @@ class ContractorAgent(Agent):
     
     def check_for_concurrency(self, next_activity):
         possible_other_next_activities = []
-        print("Check for additional activities...")
+        # print("Check for additional activities...")
         # determine possible activities and their respective probability to occur in parallel
         acts = []
         weights = []
@@ -1434,7 +1435,7 @@ class ContractorAgent(Agent):
             current_act = sampled_start_act
             self.new_activity_index = self.activities.index(sampled_start_act)
             next_activity = sampled_start_act
-            print(f"start activity: {next_activity}")
+            # print(f"start activity: {next_activity}")
         else:
             current_act = case.get_last_activity()
             self.current_activity_index = self.activities.index(current_act)
@@ -1445,7 +1446,7 @@ class ContractorAgent(Agent):
                 while tuple(prefix) not in self.transition_probabilities.keys():
                     prefix = prefix[1:]
                 # Extract activities and probabilities
-                print(self.transition_probabilities[tuple(prefix)])
+                # print(self.transition_probabilities[tuple(prefix)])
                 activity_list = list(self.transition_probabilities[tuple(prefix)].keys())
                 probabilities = list(self.transition_probabilities[tuple(prefix)].values())
                 # Sample an activity based on the probabilities
@@ -1455,7 +1456,7 @@ class ContractorAgent(Agent):
                 while tuple(prefix) not in self.transition_probabilities.keys() or self.case.previous_agent not in self.transition_probabilities[tuple(prefix)].keys():
                     prefix = prefix[1:]
                 # Extract activities and probabilities
-                print(self.transition_probabilities[tuple(prefix)])
+                # print(self.transition_probabilities[tuple(prefix)])
                 activity_list = list(self.transition_probabilities[tuple(prefix)][self.case.previous_agent].keys())
                 probabilities = list(self.transition_probabilities[tuple(prefix)][self.case.previous_agent].values())
                 # Sample an activity based on the probabilities
@@ -1506,7 +1507,7 @@ class ContractorAgent(Agent):
                 if len(possible_other_next_activities) > 0:
                     next_activity = random.choice(possible_other_next_activities)
                     self.new_activity_index = self.activities.index(next_activity)
-                    print(f"Changed next activity to {next_activity}")
+                    # print(f"Changed next activity to {next_activity}")
                     activity_allowed = True
                     # check if next activity is zzz_end
                     if next_activity == 'zzz_end':
@@ -1518,12 +1519,13 @@ class ContractorAgent(Agent):
                     activity_allowed = True
 
             if activity_allowed == False:
-                print(f"case_id: {self.case.case_id}: Next activity {next_activity} not allowed from current activity {current_act} with history {self.case.activities_performed}")
+                # print(f"case_id: {self.case.case_id}: Next activity {next_activity} not allowed from current activity {current_act} with history {self.case.activities_performed}")
                 # TODO: do something when activity is not allowed
                 potential_agents = None
                 return potential_agents, case_ended#, [], []
             else:
-                print(f"case_id: {self.case.case_id}: Next activity {next_activity} IS ALLOWED from current activity {current_act} with history {self.case.activities_performed}")
+                pass
+                # print(f"case_id: {self.case.case_id}: Next activity {next_activity} IS ALLOWED from current activity {current_act} with history {self.case.activities_performed}")
         
         # check which agents can potentially perform the next task
         potential_agents = [key for key, value in self.agent_activity_mapping.items() if any(next_activity == item for item in value)]
@@ -1636,7 +1638,7 @@ class BusinessProcessModel(Model):
         # Sort cases by current timestamp
         cases.sort(key=lambda x: x.current_timestamp)
         # print(f"cases after sorting: {[case.current_timestamp for case in cases]}")
-        print("NEW SIMULATION STEP")
+        # print("NEW SIMULATION STEP")
         for case in cases:
             current_active_agents, case_ended = self.contractor_agent.get_potential_agents(case=case)
             if case_ended:
@@ -1651,7 +1653,7 @@ class BusinessProcessModel(Model):
                 current_active_agents_sampled = current_active_agents
                 self.schedule.step(cases=cases, current_active_agents=current_active_agents_sampled)
 
-            print("##################")
+            # print("##################")
 
 
 
@@ -1704,9 +1706,11 @@ if __name__ == "__main__":
     train_and_test = True
     column_names = {}
     discover_extr_delays = False
+    discover_delays = False
     discover_parallel_work = False
     discover_multitask = False
     central_orchestration = False
+    determine_automatically = True
     for opt, arg in opts:
         key = catch_parameter(opt)
         if key in ["log_path"]:
@@ -1731,22 +1735,22 @@ if __name__ == "__main__":
         if key in ["extr_delays"]:
             if arg == "True":
                 discover_extr_delays = True
-        if key in ["parallel_work"]:
-            if arg == "True":
-                discover_parallel_work = True
-        if key in ["multi_task"]:
-            if arg == "True":
-                discover_multitask = True
+                discover_delays = True
         if key in ["central_orchestration"]:
             if arg == "True":
                 central_orchestration = True
+            determine_automatically = False
             
 
     file_name = os.path.splitext(os.path.basename(PATH_LOG))[0]
-    if central_orchestration:
-        file_name_extension = 'central'
+    if determine_automatically:
+        print("Choice for architecture and extraneous delays will be determined automatically")
+        file_name_extension = 'main_results'
     else:
-        file_name_extension = 'decentral'
+        if central_orchestration:
+            file_name_extension = 'orchestrated'
+        else:
+            file_name_extension = 'autonomous'
     if train_and_test:
         business_process_data, df_test, num_cases_to_simulate = split_data(PATH_LOG, column_names, PATH_LOG_test)
     else:
@@ -1776,7 +1780,7 @@ if __name__ == "__main__":
     _ = compute_activity_duration_distribution(df_test)
     _ = compute_activity_duration_distribution(df_val)
 
-    print(os.getcwd())
+    # print(os.getcwd())
     data_dir = os.path.join(os.getcwd(), "simulated_data", file_name, file_name_extension)
     print(data_dir)
     os.system(f"mkdir {data_dir}")
@@ -1806,10 +1810,7 @@ if __name__ == "__main__":
     # start_timestamp = max(business_process_data.groupby('case_id')['start_timestamp'].min().to_list())
     start_timestamp = min(df_test.groupby('case_id')['start_timestamp'].min().to_list())
     start_timestamp_val = min(df_val.groupby('case_id')['start_timestamp'].min().to_list())
-
-    # start_timestamp_val = min(df_val.groupby('case_id')['start_timestamp'].min().to_list())
-    # start_timestamp = pd.Timestamp('2023-08-12 10:50:00.723000+0000', tz='UTC')
-    print(f"######## start timestamp for simulation: {start_timestamp}")
+    # print(f"######## start timestamp for simulation: {start_timestamp}")
 
     # extract roles and calendars  
     roles = discover_roles_and_calendars(business_process_data_without_end_activity)
@@ -1902,24 +1903,15 @@ if __name__ == "__main__":
     # Some further mining steps
     # define mapping of agents to activities based on event log
     agent_activity_mapping = business_process_data.groupby('agent')['activity_name'].unique().apply(list).to_dict()
-    # print(f"activity mapping: {agent_activity_mapping}")
 
-    # get transition matrix
-    # transition_probabilities = calculate_activity_probabilities(business_process_data)
-
-    if central_orchestration == False:
-        transition_probabilities = compute_activity_transition_dict(business_process_data)
-        # print(transition_probabilities)
-        agent_transition_probabilities = calculate_agent_transition_probabilities(business_process_data)
-    else:
-        agent_transition_probabilities = None
-        transition_probabilities = compute_activity_transition_dict_global(business_process_data)
+    transition_probabilities_autonomous = compute_activity_transition_dict(business_process_data)
+    agent_transition_probabilities_autonomous = calculate_agent_transition_probabilities(business_process_data)
+    agent_transition_probabilities = None
+    transition_probabilities = compute_activity_transition_dict_global(business_process_data)
 
 
     # get prerequisites for each activity
     prerequisites, parallel_activities = get_prerequisites_per_activity(business_process_data, discover_parallel_work)
-    # print(f"prerequisites: {prerequisites}")
-    # print(f"parallel activities: {parallel_activities}")
     parallel_activities_list = [element for sublist in parallel_activities for element in sublist]
     parallel_activities_dict = {act: [] for act in parallel_activities_list}
     for pair in parallel_activities:
@@ -1932,14 +1924,11 @@ if __name__ == "__main__":
     # get maximum activity frequency per case
     # Group by case_id and activity_name, then count occurrences
     activity_counts = business_process_data.groupby(['case_id', 'activity_name']).size().reset_index(name='count')
-    # activity_counts_val = df_train.groupby(['case_id', 'activity_name']).size().reset_index(name='count')
     # Find the maximum count for each activity across all cases
     max_activity_count_per_case = activity_counts.groupby('activity_name')['count'].max().to_dict()
-    # max_activity_count_per_case_val = activity_counts_val.groupby('activity_name')['count'].max().to_dict()
 
     multitasking_probs_per_resource = check_for_multitasking_per_resource(business_process_data, discover_multitask)
     max_multitasking_activities = check_for_multitasking_number(business_process_data)
-    # print(multitasking_probs_per_resource)
 
     def get_times_for_extrt_delays(discover_extr_delays=True):
         if discover_extr_delays == True:
@@ -1956,7 +1945,7 @@ if __name__ == "__main__":
                 timer_placement=TimerPlacement.BEFORE,
             )
 
-            print("defined configuration")
+            # print("defined configuration")
 
             if discovery_method == "naive":
                 timers = compute_naive_extraneous_activity_delays(
@@ -1975,105 +1964,203 @@ if __name__ == "__main__":
 
         return timers
     
-    # # 1) simulate val log with extr delays
-    # # 2) simulate val log without extr delays
-    # # 3) compute cycle time and check which one is closer to the val log
-    # # 4) set the hyperparameter for extr_delays
-    # # 5) simulate 10 times the test log
-        
-    # 1) simulate val log with extr delays
-    discover_extr_delays = True
-    timers_extr = get_times_for_extrt_delays(discover_extr_delays)
-    timers = timers_extr
-    sampled_case_starting_times = sampled_cases_val
-    start_timestamp = sampled_case_starting_times[0]
-    sampled_case_starting_times = sampled_case_starting_times[1:]
+    timers_extr = get_times_for_extrt_delays(discover_extr_delays=True)
+    timers = get_times_for_extrt_delays(discover_extr_delays=False)
 
-    # Create the model using the loaded data
-    business_process_model = BusinessProcessModel(business_process_data, activity_durations_dict, 
-                                                      sampled_case_starting_times, roles, res_calendars, start_timestamp,
-                                                      agent_activity_mapping, transition_probabilities, prerequisites, parallel_activities,
-                                                      max_activity_count_per_case, parallels_probs_dict, timers, discover_parallel_work, 
-                                                      multitasking_probs_per_resource, max_multitasking_activities, activities_without_waiting_time,
-                                                      agent_transition_probabilities, central_orchestration)
-
-    # define list of cases
-    case_id = 0
-    case_ = Case(case_id=case_id, start_timestamp=start_timestamp) # first case
-    cases = [case_]
-
-    # Run the model for a specified number of steps
-    while business_process_model.sampled_case_starting_times: # while cases list is not empty
-        business_process_model.step(cases)
-    simulated_log_val_extr = pd.DataFrame(STEPS_TAKEN)
-    STEPS_TAKEN = [] # reset
-
-    # 2) simulate val log without extr delays
-    discover_extr_delays = False
-    timers = get_times_for_extrt_delays(discover_extr_delays)
-    sampled_case_starting_times = sampled_cases_val
-    start_timestamp = sampled_case_starting_times[0]
-    sampled_case_starting_times = sampled_case_starting_times[1:]
-
-    # Create the model using the loaded data
-    business_process_model = BusinessProcessModel(business_process_data, activity_durations_dict, 
-                                                      sampled_case_starting_times, roles, res_calendars, start_timestamp,
-                                                      agent_activity_mapping, transition_probabilities, prerequisites, parallel_activities,
-                                                      max_activity_count_per_case, parallels_probs_dict, timers, discover_parallel_work, 
-                                                      multitasking_probs_per_resource, max_multitasking_activities, activities_without_waiting_time,
-                                                      agent_transition_probabilities, central_orchestration)
-
-    # define list of cases
-    case_id = 0
-    case_ = Case(case_id=case_id, start_timestamp=start_timestamp) # first case
-    cases = [case_]
-
-    # Run the model for a specified number of steps
-    while business_process_model.sampled_case_starting_times: # while cases list is not empty
-        business_process_model.step(cases)
-    simulated_log_val_ = pd.DataFrame(STEPS_TAKEN)
-    print(f"number of simulated cases: {len(business_process_model.past_cases)}")
-    STEPS_TAKEN = [] # reset
-
-    # 3) compute cycle time and check which one is closer to the val log
-    from log_distance_measures.config import EventLogIDs
-    from log_distance_measures.cycle_time_distribution import cycle_time_distribution_distance
-
-    # Set event log column ID mapping
-    event_log_ids = EventLogIDs(  # These values are stored in DEFAULT_CSV_IDS
-        case="case_id",
-        activity="activity_name",
-        start_time="start_timestamp",
-        end_time="end_timestamp",
-        resource='resource'
-    )
-
-    ctdd_extr = cycle_time_distribution_distance(
-                df_val, event_log_ids,  # First event log and its column id mappings
-                simulated_log_val_extr, event_log_ids,  # Second event log and its column id mappings
-                bin_size=pd.Timedelta(hours=1)  # Bins of 1 hour
-            )
-    
-    ctdd = cycle_time_distribution_distance(
-                df_val, event_log_ids,  # First event log and its column id mappings
-                simulated_log_val_, event_log_ids,  # Second event log and its column id mappings
-                bin_size=pd.Timedelta(hours=1)  # Bins of 1 hour
-            )
-    print(f"CTD with extr: {ctdd_extr}")
-    print(f"CTD without extr: {ctdd}")
-
-    # 4) set the hyperparameter for extr_delays
-    if ctdd_extr > ctdd:
-        timers = timers # do not discover extr delays for test log simulation
-        discover_delays = False
-    else:
+    if determine_automatically:   
+        # 1) simulate val log with extr delays and central orchestration
+        discover_extr_delays = True
+        central_orchestration = True
+        # timers_extr = get_times_for_extrt_delays(discover_extr_delays)
         timers = timers_extr
-        discover_delays = True
+        sampled_case_starting_times = sampled_cases_val
+        start_timestamp = sampled_case_starting_times[0]
+        sampled_case_starting_times = sampled_case_starting_times[1:]
+
+        # Create the model using the loaded data
+        business_process_model = BusinessProcessModel(business_process_data, activity_durations_dict, 
+                                                        sampled_case_starting_times, roles, res_calendars, start_timestamp,
+                                                        agent_activity_mapping, transition_probabilities, prerequisites, parallel_activities,
+                                                        max_activity_count_per_case, parallels_probs_dict, timers, discover_parallel_work, 
+                                                        multitasking_probs_per_resource, max_multitasking_activities, activities_without_waiting_time,
+                                                        agent_transition_probabilities, central_orchestration)
+
+        # define list of cases
+        case_id = 0
+        case_ = Case(case_id=case_id, start_timestamp=start_timestamp) # first case
+        cases = [case_]
+
+        # Run the model for a specified number of steps
+        while business_process_model.sampled_case_starting_times: # while cases list is not empty
+            business_process_model.step(cases)
+        simulated_log_val_extr = pd.DataFrame(STEPS_TAKEN)
+        STEPS_TAKEN = [] # reset
+
+        # 2) simulate val log without extr delays and central orchestration
+        discover_extr_delays = False
+        central_orchestration = True
+        timers = get_times_for_extrt_delays(discover_extr_delays)
+        sampled_case_starting_times = sampled_cases_val
+        start_timestamp = sampled_case_starting_times[0]
+        sampled_case_starting_times = sampled_case_starting_times[1:]
+
+        # Create the model using the loaded data
+        business_process_model = BusinessProcessModel(business_process_data, activity_durations_dict, 
+                                                        sampled_case_starting_times, roles, res_calendars, start_timestamp,
+                                                        agent_activity_mapping, transition_probabilities, prerequisites, parallel_activities,
+                                                        max_activity_count_per_case, parallels_probs_dict, timers, discover_parallel_work, 
+                                                        multitasking_probs_per_resource, max_multitasking_activities, activities_without_waiting_time,
+                                                        agent_transition_probabilities, central_orchestration)
+
+        # define list of cases
+        case_id = 0
+        case_ = Case(case_id=case_id, start_timestamp=start_timestamp) # first case
+        cases = [case_]
+
+        # Run the model for a specified number of steps
+        while business_process_model.sampled_case_starting_times: # while cases list is not empty
+            business_process_model.step(cases)
+        simulated_log_val_ = pd.DataFrame(STEPS_TAKEN)
+        print(f"number of simulated cases: {len(business_process_model.past_cases)}")
+        STEPS_TAKEN = [] # reset
+
+        # 3) simulate val log with extr delays and autonomous handover
+        discover_extr_delays = True
+        central_orchestration = False
+        # timers_extr = get_times_for_extrt_delays(discover_extr_delays)
+        timers = timers_extr
+        sampled_case_starting_times = sampled_cases_val
+        start_timestamp = sampled_case_starting_times[0]
+        sampled_case_starting_times = sampled_case_starting_times[1:]
+
+        # Create the model using the loaded data
+        business_process_model = BusinessProcessModel(business_process_data, activity_durations_dict, 
+                                                        sampled_case_starting_times, roles, res_calendars, start_timestamp,
+                                                        agent_activity_mapping, transition_probabilities_autonomous, prerequisites, parallel_activities,
+                                                        max_activity_count_per_case, parallels_probs_dict, timers, discover_parallel_work, 
+                                                        multitasking_probs_per_resource, max_multitasking_activities, activities_without_waiting_time,
+                                                        agent_transition_probabilities_autonomous, central_orchestration)
+
+        # define list of cases
+        case_id = 0
+        case_ = Case(case_id=case_id, start_timestamp=start_timestamp) # first case
+        cases = [case_]
+
+        # Run the model for a specified number of steps
+        while business_process_model.sampled_case_starting_times: # while cases list is not empty
+            business_process_model.step(cases)
+        simulated_log_val_extr_autonomous = pd.DataFrame(STEPS_TAKEN)
+        STEPS_TAKEN = [] # reset
+
+        # 4) simulate val log without extr delays and autonomous handover
+        discover_extr_delays = False
+        central_orchestration = False
+        timers = get_times_for_extrt_delays(discover_extr_delays)
+        sampled_case_starting_times = sampled_cases_val
+        start_timestamp = sampled_case_starting_times[0]
+        sampled_case_starting_times = sampled_case_starting_times[1:]
+
+        # Create the model using the loaded data
+        business_process_model = BusinessProcessModel(business_process_data, activity_durations_dict, 
+                                                        sampled_case_starting_times, roles, res_calendars, start_timestamp,
+                                                        agent_activity_mapping, transition_probabilities_autonomous, prerequisites, parallel_activities,
+                                                        max_activity_count_per_case, parallels_probs_dict, timers, discover_parallel_work, 
+                                                        multitasking_probs_per_resource, max_multitasking_activities, activities_without_waiting_time,
+                                                        agent_transition_probabilities_autonomous, central_orchestration)
+
+        # define list of cases
+        case_id = 0
+        case_ = Case(case_id=case_id, start_timestamp=start_timestamp) # first case
+        cases = [case_]
+
+        # Run the model for a specified number of steps
+        while business_process_model.sampled_case_starting_times: # while cases list is not empty
+            business_process_model.step(cases)
+        simulated_log_val_autonomous = pd.DataFrame(STEPS_TAKEN)
+        # print(f"number of simulated cases: {len(business_process_model.past_cases)}")
+        STEPS_TAKEN = [] # reset
+
+        # 5) compute cycle time and check which one is closer to the val log
+        from log_distance_measures.config import EventLogIDs
+        from log_distance_measures.cycle_time_distribution import cycle_time_distribution_distance
+
+        # Set event log column ID mapping
+        event_log_ids = EventLogIDs(  # These values are stored in DEFAULT_CSV_IDS
+            case="case_id",
+            activity="activity_name",
+            start_time="start_timestamp",
+            end_time="end_timestamp",
+            resource='resource'
+        )
+
+        ctdd_extr = cycle_time_distribution_distance(
+                    df_val, event_log_ids,  # First event log and its column id mappings
+                    simulated_log_val_extr, event_log_ids,  # Second event log and its column id mappings
+                    bin_size=pd.Timedelta(hours=1)  # Bins of 1 hour
+                )
+        
+        ctdd = cycle_time_distribution_distance(
+                    df_val, event_log_ids,  # First event log and its column id mappings
+                    simulated_log_val_, event_log_ids,  # Second event log and its column id mappings
+                    bin_size=pd.Timedelta(hours=1)  # Bins of 1 hour
+                )
+        
+        ctdd_extr_autonomous = cycle_time_distribution_distance(
+                    df_val, event_log_ids,  # First event log and its column id mappings
+                    simulated_log_val_extr_autonomous, event_log_ids,  # Second event log and its column id mappings
+                    bin_size=pd.Timedelta(hours=1)  # Bins of 1 hour
+                )
+        
+        ctdd_autonomous = cycle_time_distribution_distance(
+                    df_val, event_log_ids,  # First event log and its column id mappings
+                    simulated_log_val_autonomous, event_log_ids,  # Second event log and its column id mappings
+                    bin_size=pd.Timedelta(hours=1)  # Bins of 1 hour
+                )
+        print(f"CTD extr + central: {ctdd_extr}")
+        print(f"CTD without extr + central: {ctdd}")
+        print(f"CTD extr + autonomous: {ctdd_extr_autonomous}")
+        print(f"CTD without extr + autonomous: {ctdd_autonomous}")
+
+        # 4) set the hyperparameter for extr_delays and the architecture
+        ct_results_val = [ctdd_extr,ctdd,ctdd_extr_autonomous,ctdd_autonomous]
+        best_val_result = min(ct_results_val)
+
+        if ctdd_extr == best_val_result:
+            timers = timers_extr
+            discover_delays = True
+            central_orchestration = True
+        elif ctdd == best_val_result:
+            timers = timers
+            discover_delays = False
+            central_orchestration = True
+        elif ctdd_extr_autonomous == best_val_result:
+            timers = timers_extr
+            discover_delays = True
+            central_orchestration = False
+            transition_probabilities = transition_probabilities_autonomous
+            agent_transition_probabilities = agent_transition_probabilities_autonomous
+        elif ctdd_autonomous == best_val_result:
+            timers = timers
+            discover_delays = False
+            central_orchestration = False
+            transition_probabilities = transition_probabilities_autonomous
+            agent_transition_probabilities = agent_transition_probabilities_autonomous         
+    else:
+        if discover_delays:
+            timers = timers_extr
+        else:
+            timers = timers
+
+        if central_orchestration == False:
+            transition_probabilities = transition_probabilities_autonomous
+            agent_transition_probabilities = agent_transition_probabilities_autonomous
+
 
     print(f"discover extr. delays: {discover_delays}")
+    print(f"central orchestration: {central_orchestration}")
 
 
-    # 5) simulate 10 times the test log
+    # 6) simulate 10 times the test log
     for i in range(10):
         sampled_case_starting_times = sampled_cases
         start_timestamp = sampled_case_starting_times[0]
@@ -2110,4 +2197,4 @@ if __name__ == "__main__":
 
         # reset STEPS_TAKEN
         STEPS_TAKEN = []
-    print(f"discovered extr. delays: {discover_delays}")
+    print(f"configuration setting: orchestrated handovers: {central_orchestration}, extr. delays: {discover_delays}")
