@@ -176,7 +176,7 @@ def discover_pool_resource_profiles(
     :return: list of resource profiles with the observed resources grouped by pool.
     """
     pools = discover_resource_pools(event_log)
-    print(f"Pools: {pools}")
+    # print(f"Pools: {pools}")
 
     resource_profiles = []
     for pool_id in pools:
