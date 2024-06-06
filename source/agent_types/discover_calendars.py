@@ -41,10 +41,6 @@ def discover_resource_calendars_per_profile(
         params.confidence, params.support, params.participation
     )
 
-    print(f"discovered timetables: {discovered_timetables}")
-    # for key, value in discovered_timetables.items():
-    #     print(f"{key}: {value.to_dict()}")
-
     pool_names = list(pools.keys())
     resource_profile_names = list(discovered_timetables.keys())
     missing_profiles = []
@@ -56,9 +52,6 @@ def discover_resource_calendars_per_profile(
                 else:
                     if resource_profile_names[j] not in missing_profiles:
                         missing_profiles.append(resource_profile_names[j])
-    print(f"missing profiles: {missing_profiles}")
-
-    print(event_log)
 
     missing_agents = []
     for profile in missing_profiles:
@@ -72,14 +65,14 @@ def discover_resource_calendars_per_profile(
         filtered_event_log = event_log[event_log['agent'].isin(missing_agents)]
 
         # Discover one resource calendar for all of them
-        print("try to discover calendar with filtered event log")
+        # print("try to discover calendar with filtered event log")
         missing_resource_calendar = _discover_undifferentiated_resource_calendar(filtered_event_log, params)
         if missing_resource_calendar is None or len(missing_resource_calendar) == 0:
-            print("try to discover calendar with full event log")
+            # print("try to discover calendar with full event log")
             # Could not discover calendar for the missing resources, discover calendar with the entire log
             missing_resource_calendar = _discover_undifferentiated_resource_calendar(event_log, params)
             if missing_resource_calendar is None or len(missing_resource_calendar) == 0:
-                print("set 24/7 calendar")
+                # print("set 24/7 calendar")
                 # Could not discover calendar for all the resources in the log, assign default 24/7
                 missing_resource_calendar = _create_full_day_calendar()
         # Add grouped calendar to discovered resource calendars
@@ -87,13 +80,13 @@ def discover_resource_calendars_per_profile(
         # Set common calendar id to missing resources
         # _update_resource_calendars(missing_profiles, missing_resource_calendar.calendar_id)
 
-        print(f"discovered timetables: {missing_resource_calendar}")
-        for key, value in missing_resource_calendar.items():
-            print(f"{key}: {value.to_dict()}")
+        # print(f"discovered timetables: {missing_resource_calendar}")
+        # for key, value in missing_resource_calendar.items():
+            # print(f"{key}: {value.to_dict()}")
         pool_names = list(pools.keys())
         resource_profile_names = list(missing_resource_calendar.keys())
-        print(f"pool names: {pool_names}")
-        print(f"resource profile names: {resource_profile_names}")
+        # print(f"pool names: {pool_names}")
+        # print(f"resource profile names: {resource_profile_names}")
         # missing_profiles = []
         for i in range(len(pool_names)):
             for j in range(len(missing_profiles)):
@@ -103,7 +96,7 @@ def discover_resource_calendars_per_profile(
                     else:
                         if resource_profile_names[j] not in missing_profiles:
                             missing_profiles.append(resource_profile_names[j])
-        print(f"missing profiles: {missing_profiles}")
+        # print(f"missing profiles: {missing_profiles}")
 
     # Create calendar per resource profile
     # resource_calendars = []
