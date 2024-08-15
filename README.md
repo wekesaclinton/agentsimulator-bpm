@@ -7,7 +7,7 @@ This is the supplementary GitHub repository of the paper: "AgentSimulator: An Ag
 To execute the code, you need to create an environment (e.g., with conda create -n myenv python=3.9) and install the following packages
 - pip install mesa==2.1.2
 - pip install pm4py
-- pip install polars
+- pip install polars==0.20.16
 - pip install pyarrow
 - pip install log_distance_measures
 
