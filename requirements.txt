@@ -1,0 +1,5 @@
+mesa==2.1.2
+pm4py
+polars==0.20.16
+pyarrow
+log_distance_measures
