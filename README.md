@@ -4,33 +4,28 @@ This is the supplementary GitHub repository of the paper: "AgentSimulator: An Ag
 ![](https://github.com/lukaskirchdorfer/AgentSimulator/blob/main/AgentSim.png)
 
 ## Prerequisites
-To execute the code, you need to create an environment (e.g., with conda create -n myenv python=3.9) and install the following packages
-- pip install mesa==2.1.2
-- pip install pm4py
-- pip install polars==0.20.16
-- pip install pyarrow
-- pip install log_distance_measures
+To execute the code, you need to create an environment (e.g., with `conda create -n myenv python=3.9`) and install the dependencies in `requirements.txt` (e.g., with `install --yes --file requirements.txt`).
 
 ## How to run the AgentSimulator
 To run the script MAS_Simulation.py you need to specify the following parameters:
 
---log_path : path to the entire log which you need to store in the folder raw_data
+`--log_path`: path to the entire log which you need to store in the folder raw_data
 
---case_id : name of the case_id column
+`--case_id`: name of the case_id column
 
---activity_name : name of the activity column
+`--activity_name`: name of the activity column
 
---resource_name : name of the resource column
+`--resource_name`: name of the resource column
 
---end_timestamp : name of the end_timestamp column
+`--end_timestamp`: name of the end timestamp column
 
---start_timestamp : name of the start_timestamp column
+`--start_timestamp`: name of the start timestamp column
 
 The hyperparameters handover type and whether to consider extraneous delays are determined automatically. If you do not want them to be automatically determined but want to run a specific configuration, just add the following parameters:
 
---central_orchestration : True or False (whether handovers are centrally orchestrated or autonomous)
+`--central_orchestration`: True or False (whether handovers are centrally orchestrated or autonomous)
 
---extr_dealys : True or False (whether to discover extraneous delays)
+`--extr_dealys`: True or False (whether to discover extraneous delays)
 
 Commands to run the datasets evaluated in our paper:
 
