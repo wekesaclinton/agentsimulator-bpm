@@ -28,8 +28,6 @@ The hyperparameters handover type and whether to consider extraneous delays are 
 `--extr_dealys`: True or False (whether to discover extraneous delays)
 
 Commands to run the datasets evaluated in our paper are in run_commands.sh
-```
-
 The 10 simulated logs as well as train and test splits are then stored in the folder simulated_data.
 
 ## Evaluation
