@@ -18,7 +18,8 @@ class AgentSimulator:
             self.num_cases_to_simulate, 
             self.num_cases_to_simulate_val,
             self.params['determine_automatically'],
-            self.params['central_orchestration']
+            self.params['central_orchestration'],
+            self.params['discover_extr_delays']
         )
 
         # simulate process

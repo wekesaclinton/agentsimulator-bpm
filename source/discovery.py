@@ -15,7 +15,7 @@ from source.extraneous_delays.delay_discoverer import compute_complex_extraneous
 from source.extraneous_delays.event_log import EventLogIDs
 from source.simulation import BusinessProcessModel, Case
 
-def discover_simulation_parameters(df_train, df_test, df_val, data_dir, num_cases_to_simulate, num_cases_to_simulate_val, determine_automatically=False, central_orchestration=False):
+def discover_simulation_parameters(df_train, df_test, df_val, data_dir, num_cases_to_simulate, num_cases_to_simulate_val, determine_automatically=False, central_orchestration=False, discover_extr_delays=False):
     """
     Discover the simulation model from the training data.
     """
@@ -72,7 +72,7 @@ def discover_simulation_parameters(df_train, df_test, df_val, data_dir, num_case
         'prerequisites': prerequisites,
     }
 
-    simulation_parameters = determine_agent_behavior_type_and_extraneous_delays(simulation_parameters, df_train, df_val, case_arrival_times_val, central_orchestration)
+    simulation_parameters = determine_agent_behavior_type_and_extraneous_delays(simulation_parameters, df_train, df_val, case_arrival_times_val, central_orchestration, discover_extr_delays)
     simulation_parameters['start_timestamp'] = START_TIME
 
 
@@ -440,7 +440,7 @@ def _get_times_for_extr_delays(df_train, discover_extr_delays=True):
     return timers
 
 
-def determine_agent_behavior_type_and_extraneous_delays(simulation_parameters, df_train, df_val, case_arrival_times_val, central_orchestration_parameter):
+def determine_agent_behavior_type_and_extraneous_delays(simulation_parameters, df_train, df_val, case_arrival_times_val, central_orchestration_parameter, discover_extr_delays_parameter):
     """
     Determine the agent behavior type and extraneous delays.
     """
@@ -592,17 +592,18 @@ def determine_agent_behavior_type_and_extraneous_delays(simulation_parameters, d
             simulation_parameters['transition_probabilities'] = simulation_parameters['transition_probabilities_autonomous']
             simulation_parameters['agent_transition_probabilities'] = simulation_parameters['agent_transition_probabilities_autonomous']
     else:
-        if discover_delays:
+        if discover_extr_delays_parameter:
             simulation_parameters['timers'] = timers_extr
         else:
             simulation_parameters['timers'] = timers
 
+        simulation_parameters['central_orchestration'] = central_orchestration_parameter
         if central_orchestration_parameter == False:
             simulation_parameters['transition_probabilities'] = simulation_parameters['transition_probabilities_autonomous']
             simulation_parameters['agent_transition_probabilities'] = simulation_parameters['agent_transition_probabilities_autonomous']
 
 
-    print(f"discover extr. delays: {discover_delays}")
-    print(f"central orchestration: {central_orchestration}")
+    # print(f"discover extr. delays: {discover_delays}")
+    # print(f"central orchestration: {central_orchestration}")
 
     return simulation_parameters

@@ -19,8 +19,9 @@ def parse_arguments():
     parser.add_argument('--start_timestamp', help='Start timestamp column name')
     
     # Hyperparameters
-    parser.add_argument('--extr_delays', type=bool, default=False, help='Enable delay extraction')
-    parser.add_argument('--central_orchestration', type=bool, default=False, help='Enable central orchestration')
+    parser.add_argument('--extr_delays', action='store_true', help='Enable delay extraction')
+    parser.add_argument('--central_orchestration', action='store_true', help='Enable central orchestration')
+    parser.add_argument('--determine_automatically', action='store_true', help='Enable automatic determination of simulation parameters')
 
     # Simulation parameters
     parser.add_argument('--num_simulations', type=int, default=10, help='Number of simulations to run')
@@ -49,7 +50,7 @@ if __name__ == "__main__":
     # Feature flags
     discover_extr_delays = discover_delays = args.extr_delays
     central_orchestration = args.central_orchestration
-    determine_automatically = not central_orchestration
+    determine_automatically = args.determine_automatically
 
     params = {
         'discover_extr_delays': discover_extr_delays,
