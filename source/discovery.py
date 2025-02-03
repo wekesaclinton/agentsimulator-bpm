@@ -1,5 +1,5 @@
 import pandas as pd
-
+import numpy as np
 from source.utils import store_preprocessed_data
 from source.agent_types.discover_roles import discover_roles_and_calendars
 from source.agent_types.discover_resource_calendar import discover_calendar_per_agent
@@ -25,7 +25,6 @@ def discover_simulation_parameters(df_train, df_test, df_val, data_dir, num_case
     START_TIME = min(df_test.groupby('case_id')['start_timestamp'].min().to_list())
     START_TIME_VAL = min(df_val.groupby('case_id')['start_timestamp'].min().to_list())
 
-    activity_durations_dict = compute_activity_duration_distribution_per_agent(df_train)
 
     df_train_without_end_activity = store_preprocessed_data(df_train, df_test, df_val, data_dir)
 
@@ -34,6 +33,8 @@ def discover_simulation_parameters(df_train, df_test, df_val, data_dir, num_case
     # extract roles and calendars  
     roles = discover_roles_and_calendars(df_train_without_end_activity)
     res_calendars, _, _, _, _ = discover_calendar_per_agent(df_train_without_end_activity)
+
+    activity_durations_dict = compute_activity_duration_distribution_per_agent(df_train, res_calendars, roles)
 
     # define mapping of agents to activities based on event log
     agent_activity_mapping = df_train.groupby('agent')['activity_name'].unique().apply(list).to_dict()
@@ -129,24 +130,124 @@ def preprocess(df):
     return df, agent_to_resource
 
 
-def _compute_activity_duration_distribution(df):
+def _compute_activity_duration_distribution(df, res_calendars, roles):
     """
     computes mean and std for each activity duration in the log and returns this in form of a dict
     """
+    # activities = sorted(set(df['activity_name']))
+    # agents = sorted(set(df['agent']))
+    # act_durations = {key: {k: [] for k in activities} for key in agents}
+    # for agent in agents:
+    #     for activity in activities:
+    #         for i in range(len(df)):
+    #             if df['agent'][i] == agent:
+    #                 if df['activity_name'][i] == activity:
+    #                     duration = (df['end_timestamp'][i] - df['start_timestamp'][i]).total_seconds()
+    #                     act_durations[agent][activity].append(duration)
+
+    # return act_durations
+
     activities = sorted(set(df['activity_name']))
     agents = sorted(set(df['agent']))
     act_durations = {key: {k: [] for k in activities} for key in agents}
+
+    
     for agent in agents:
+        if agent in res_calendars.keys():
+            agent_calendar = res_calendars[agent].intervals_to_json()
+        else:
+            agent_calendar = next((ids['calendar'] for role, ids in roles.items() if agent in ids['agents']), None)
+        # print(f"agent: {agent}")
+        # print(f"agent_calendar: {agent_calendar}")
+        # if agent_calendar is None:
+        #     continue
+
+        # Convert calendar to workday schedule
+        work_schedule = {}
+        for shift in agent_calendar:
+            day = shift['from']  # e.g., 'MONDAY'
+            start_time = pd.to_datetime(shift['beginTime']).time()  # e.g., '07:00:00'
+            end_time = pd.to_datetime(shift['endTime']).time()  # e.g., '15:00:00'
+            work_schedule[day] = (start_time, end_time)
+        
         for activity in activities:
-            for i in range(len(df)):
-                if df['agent'][i] == agent:
-                    if df['activity_name'][i] == activity:
-                        duration = (df['end_timestamp'][i] - df['start_timestamp'][i]).total_seconds()
-                        act_durations[agent][activity].append(duration)
+            # print(f"activity: {activity}")
+            mask = (df['agent'] == agent) & (df['activity_name'] == activity)
+            activity_events = df[mask]
+            
+            for _, event in activity_events.iterrows():
+                start_time = event['start_timestamp']
+                end_time = event['end_timestamp']
+                # print(f"start_time: {start_time}, end_time: {end_time}")
+                
+                # Initialize counters
+                total_duration = (end_time - start_time).total_seconds()
+                off_time = 0
+                current_time = start_time
+                
+                # Iterate through each day of the activity
+                while current_time < end_time:
+                    day_name = current_time.strftime('%A').upper()
+                    # print(f"day_name: {day_name}")
+                    day_start = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+                    day_end = day_start + pd.Timedelta(days=1)
+                    
+                    # Get work hours for this day
+                    work_hours = work_schedule.get(day_name)
+                    # print(f"work_hours: {work_hours}")
+                    if work_hours:
+                        work_start = day_start.replace(
+                            hour=work_hours[0].hour,
+                            minute=work_hours[0].minute,
+                            second=work_hours[0].second
+                        )
+                        work_end = day_start.replace(
+                            hour=work_hours[1].hour,
+                            minute=work_hours[1].minute,
+                            second=work_hours[1].second
+                        )
+                        
+                        # Calculate off time for this day
+                        day_activity_start = max(current_time, day_start)
+                        day_activity_end = min(end_time, day_end)
+                        
+                        # Before work hours
+                        if day_activity_start < work_start:
+                            off_end = min(work_start, day_activity_end)
+                            off_time += (off_end - day_activity_start).total_seconds()
+                            # print(f"off time before work hours: {(off_end - day_activity_start).total_seconds()}")
+                        
+                        # After work hours
+                        if day_activity_end > work_end:
+                            off_start = max(work_end, day_activity_start)
+                            off_time += (day_activity_end - off_start).total_seconds()
+                            # print(f"off time after work hours: {(day_activity_end - off_start).total_seconds()}")
+                    else:
+                        # Full day off
+                        day_activity_start = max(current_time, day_start)
+                        day_activity_end = min(end_time, day_end)
+                        off_time += (day_activity_end - day_activity_start).total_seconds()
+                        # print(f"off time full day off: {(day_activity_end - day_activity_start).total_seconds()}")
+                    # Move to next day
+                    current_time = day_end
+
+                # print(f"total_duration: {total_duration}, off_time: {off_time}")
+                # Calculate actual working duration
+                actual_duration = total_duration - off_time
+                if actual_duration >= 0:  # Only add positive durations
+                    act_durations[agent][activity].append(actual_duration)
+
+    # # print the mean and std of the activity durations
+    # for agent, activities in act_durations.items():
+    #     for activity, durations in activities.items():
+    #         if len(durations) > 0:
+    #             print(f"agent: {agent}, activity: {activity}, mean: {np.mean(durations)}, std: {np.std(durations)}")
+    
+    # x=y
 
     return act_durations
 
-def compute_activity_duration_distribution_per_agent(df_train):
+def compute_activity_duration_distribution_per_agent(df_train, res_calendars, roles):
     """
     Compute the best fitting distribution of activity durations per agent.
 
@@ -156,7 +257,7 @@ def compute_activity_duration_distribution_per_agent(df_train):
     Returns:
         dict: A dict storing for each agent the distribution for each activity.
     """
-    activity_durations_dict = _compute_activity_duration_distribution(df_train)
+    activity_durations_dict = _compute_activity_duration_distribution(df_train, res_calendars, roles)
 
     agents = activity_durations_dict.keys()
     activities = []
@@ -215,69 +316,76 @@ def activities_with_zero_waiting_time(df, threshold=0.99):
     
     return always_zero_waiting_time_activities.index.tolist()
 
-
-def get_prerequisites_per_activity(data, discover_parallel_work=True):
-    # Check for parallel activities
-    result = []
-    # Group by case_id
-    grouped = data.groupby('case_id')
-    # Iterate over groups
-    for case_id, group in grouped:
-        # Call the function to check for parallel activities with a minimum of 2
-        parallel_activities = check_parallel_activities(group, min_activities=2)
-        
-        # Extend the result list with the detected parallel activities
-        result.extend([(case_id,) + tuple(activities) for activities in parallel_activities])
-
-    parallel_activities = get_unique_parallel_activities(result=result)
-
+def get_prerequisites_per_activity(data):
     preceding_activities_dict = generate_preceding_activities_dict(data)
-    # print(f"preceeding activties: {preceding_activities_dict}")
-    # remove parallel activities as prerequisite for each other
-    for i in range(len(parallel_activities)):
-        for key, value in preceding_activities_dict.items():
-            if key in parallel_activities[i]:
-                par = parallel_activities[i]
-                related_activities = [item for item in par if item != key]
-                for j in related_activities:
-                    if j in value: # TODO understand why we need to add this
-                        value.remove(j)
-            # join parallel activities in prerequisite of other activities to mark that they are both required
-            parallels = parallel_activities[i]
-            value_flattened = [item for sublist in value for item in sublist]
+    print(f"preceding_activities_dict: {preceding_activities_dict}")
+    # x=y
+    return preceding_activities_dict, None
 
-            if set(parallels).issubset(set(value_flattened)):
-                # Check if 'parallels' is a subset of 'value_flattened'
-                disjoint_part = list(set(parallels).symmetric_difference(set(value)))
+# def get_prerequisites_per_activity(data, discover_parallel_work=True):
+#     # Check for parallel activities
+#     result = []
+#     # Group by case_id
+#     grouped = data.groupby('case_id')
+#     # Iterate over groups
+#     for case_id, group in grouped:
+#         # Call the function to check for parallel activities with a minimum of 2
+#         parallel_activities = check_parallel_activities(group, min_activities=2)
+        
+#         # Extend the result list with the detected parallel activities
+#         result.extend([(case_id,) + tuple(activities) for activities in parallel_activities])
 
-                # Convert 'parallels' to a tuple before using it as a key
-                parallels_tuple = tuple(parallels)
+#     parallel_activities = get_unique_parallel_activities(result=result)
+#     # print(f"parallel_activities: {parallel_activities}")
 
-                # Use the tuple as a key in the dictionary
-                preceding_activities_dict[key] = disjoint_part + [parallels_tuple]
+#     preceding_activities_dict = generate_preceding_activities_dict(data)
+#     # print(f"preceeding activties: {preceding_activities_dict}")
+#     # remove parallel activities as prerequisite for each other
+#     for i in range(len(parallel_activities)):
+#         for key, value in preceding_activities_dict.items():
+#             if key in parallel_activities[i]:
+#                 par = parallel_activities[i]
+#                 related_activities = [item for item in par if item != key]
+#                 for j in related_activities:
+#                     if j in value: # TODO understand why we need to add this
+#                         value.remove(j)
+#             # join parallel activities in prerequisite of other activities to mark that they are both required
+#             parallels = parallel_activities[i]
+#             value_flattened = [item for sublist in value for item in sublist]
 
-    # remove the activity itself as prerequisite for itself
-    new_dict = {key: [] for key, value in preceding_activities_dict.items()}
-    for key, value in preceding_activities_dict.items():     
-        for i in range(len(value)):
-            if not isinstance(value[i], list):
-                if not value[i] == key:
-                    new_dict[key].append(value[i])
+#             if set(parallels).issubset(set(value_flattened)):
+#                 # Check if 'parallels' is a subset of 'value_flattened'
+#                 disjoint_part = list(set(parallels).symmetric_difference(set(value)))
 
-            # if value contains sublists
-            else:
-                if key in value[i]:
-                    value[i].remove(key)
-                    new_dict[key].append(value[i])
-                else:
-                    new_dict[key].append(value[i])
+#                 # Convert 'parallels' to a tuple before using it as a key
+#                 parallels_tuple = tuple(parallels)
 
-    preceding_activities_dict = new_dict
+#                 # Use the tuple as a key in the dictionary
+#                 preceding_activities_dict[key] = disjoint_part + [parallels_tuple]
 
-    if discover_parallel_work == False:
-        parallel_activities = []
+#     # remove the activity itself as prerequisite for itself
+#     new_dict = {key: [] for key, value in preceding_activities_dict.items()}
+#     for key, value in preceding_activities_dict.items():     
+#         for i in range(len(value)):
+#             if not isinstance(value[i], list):
+#                 if not value[i] == key:
+#                     new_dict[key].append(value[i])
 
-    return preceding_activities_dict, parallel_activities
+#             # if value contains sublists
+#             else:
+#                 if key in value[i]:
+#                     value[i].remove(key)
+#                     new_dict[key].append(value[i])
+#                 else:
+#                     new_dict[key].append(value[i])
+
+#     preceding_activities_dict = new_dict
+
+#     if discover_parallel_work == False:
+#         parallel_activities = []
+#     # print(f"preceding_activities_dict: {preceding_activities_dict}")
+
+#     return preceding_activities_dict, parallel_activities
     
 
 def check_parallel_activities(group, min_activities=2):
@@ -287,11 +395,13 @@ def check_parallel_activities(group, min_activities=2):
     # Iterate over the range of parallel activities (2 or more)
     for i in range(len(sorted_group) - min_activities + 1):
         current_end_time = sorted_group.iloc[i]['end_timestamp']
-        parallel_activities = [sorted_group.iloc[j]['activity_name'] for j in range(i + 1, i + min_activities) if current_end_time > sorted_group.iloc[j]['start_timestamp']]
-
-        if len(parallel_activities) == min_activities - 1:
-            result.append(parallel_activities + [sorted_group.iloc[i]['activity_name']])
-
+        if sorted_group.iloc[i]['end_timestamp'] - sorted_group.iloc[i]['start_timestamp'] > pd.Timedelta(seconds=0):
+            # print(f"current activity: {sorted_group.iloc[i]['activity_name']}")
+            parallel_activities = [sorted_group.iloc[j]['activity_name'] for j in range(i + 1, i + min_activities) if current_end_time > sorted_group.iloc[j]['start_timestamp'] and sorted_group.iloc[j]['end_timestamp'] - sorted_group.iloc[j]['start_timestamp'] > pd.Timedelta(seconds=0)]
+            if len(parallel_activities) == min_activities - 1:
+                # print(f"parallel_activities: {parallel_activities}")
+                result.append(parallel_activities + [sorted_group.iloc[i]['activity_name']])
+        
     return result
 
 def get_unique_parallel_activities(result):
@@ -379,31 +489,87 @@ def discover_connected_pairs(activity_list):
 
     return connections
 
+def intersect_lists(list_of_lists):
+    """
+    Returns the intersection of all lists in a list of lists.
+    
+    Args:
+        list_of_lists (list of lists): A list containing multiple lists.
+    
+    Returns:
+        list: A list containing elements common to all input lists.
+    """
+    if not list_of_lists:
+        return []
+    
+    # Use set intersection to find common elements
+    intersection = set(list_of_lists[0])
+    for lst in list_of_lists[1:]:
+        intersection &= set(lst)
+    
+    # Return the intersection as a list 
+    intersection = list(intersection)
+
+    return intersection
+
 
 def generate_preceding_activities_dict(data):
     preceding_activities_dict = {}
+    preceding_activities_dict_clean = {}
 
     # Group by case_id
     grouped = data.groupby('case_id')
 
     # Iterate over groups
     for case_id, group in grouped:
-        sorted_group = group.sort_values(by='start_timestamp')
+        sorted_group = group.sort_values(by='end_timestamp')
 
-        # Iterate through the sorted activities
         for i in range(1, len(sorted_group)):
             current_activity = sorted_group.iloc[i]['activity_name']
-            preceding_activity = sorted_group.iloc[i - 1]['activity_name']
+            # print(f"current_activity: {current_activity}")
+            preceding_activities = [sorted_group.iloc[i - j]['activity_name'] for j in range(1, i+1)]
+            # print(f"preceding_activities: {preceding_activities}")
 
-            # Update the dictionary with the preceding activity
             if current_activity not in preceding_activities_dict:
-                preceding_activities_dict[current_activity] = set()
-            preceding_activities_dict[current_activity].add(preceding_activity)
+                preceding_activities_dict[current_activity] = []
+            preceding_activities_dict[current_activity].append(preceding_activities)
+        
+    # print(f"preceding_activities_dict: {preceding_activities_dict}")
 
-    # Convert sets to lists
-    preceding_activities_dict = {key: list(value) for key, value in preceding_activities_dict.items()}
+    # iterate over all keys and extract the activities that appear in each sublist of that key
+    for key, value in preceding_activities_dict.items():
+        preceding_activities_dict_clean[key] = intersect_lists(value)
 
-    return preceding_activities_dict
+    # print(f"preceding_activities_dict_clean: {preceding_activities_dict_clean}")
+
+    return preceding_activities_dict_clean
+
+# def generate_preceding_activities_dict(data):
+#     preceding_activities_dict = {}
+
+#     # Group by case_id
+#     grouped = data.groupby('case_id')
+
+#     # Iterate over groups
+#     for case_id, group in grouped:
+#         sorted_group = group.sort_values(by='end_timestamp')
+#         print(f"first activity: {sorted_group.iloc[0]['activity_name']}")
+
+#         # Iterate through the sorted activities
+#         for i in range(1, len(sorted_group)):
+#             current_activity = sorted_group.iloc[i]['activity_name']
+#             preceding_activity = sorted_group.iloc[i - 1]['activity_name']
+
+#             # Update the dictionary with the preceding activity
+#             if current_activity not in preceding_activities_dict:
+#                 preceding_activities_dict[current_activity] = set()
+#             preceding_activities_dict[current_activity].add(preceding_activity)
+
+#     # Convert sets to lists
+#     preceding_activities_dict = {key: list(value) for key, value in preceding_activities_dict.items()}
+
+#     print(f"preceding_activities_dict: {preceding_activities_dict}")
+#     return preceding_activities_dict
 
 def _get_times_for_extr_delays(df_train, discover_extr_delays=True):
     if discover_extr_delays == True:
@@ -592,7 +758,7 @@ def determine_agent_behavior_type_and_extraneous_delays(simulation_parameters, d
             simulation_parameters['transition_probabilities'] = simulation_parameters['transition_probabilities_autonomous']
             simulation_parameters['agent_transition_probabilities'] = simulation_parameters['agent_transition_probabilities_autonomous']
     else:
-        if discover_extr_delays_parameter:
+        if discover_extr_delays_parameter == True:
             simulation_parameters['timers'] = timers_extr
         else:
             simulation_parameters['timers'] = timers

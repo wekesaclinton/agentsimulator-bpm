@@ -102,8 +102,31 @@ class ResourceAgent(Agent):
                                     'end_timestamp': self.contractor_agent.case.current_timestamp,
                                     'TimeStep': self.model.schedule.steps,
                                     })
+            elif self.start_time_in_calendar(current_timestamp):
+                # print(f"simulate interruption")
+                # end_time_without_interruptions = current_timestamp + pd.Timedelta(seconds=activity_duration)
+                end_time = self.add_off_time_to_end_time(current_timestamp, activity_duration)
+                self.occupied_times.append((current_timestamp, end_time))
+                self.is_busy_until = end_time
+                self.is_busy = True
+                self.model.agents_busy_until[self.resource] = self.is_busy_until
+
+                self.contractor_agent.case.current_timestamp = end_time
+                self.contractor_agent.case.add_activity_to_case(activity)
+                self.contractor_agent.activity_performed = True
+                self.contractor_agent.case.previous_agent = self.resource
+
+                self.model.simulated_events.append({'case_id': self.contractor_agent.case.case_id, 
+                                    'agent': self.resource, 
+                                    'activity_name': activity,
+                                    'start_timestamp': current_timestamp,
+                                    'end_timestamp': self.contractor_agent.case.current_timestamp,
+                                    'TimeStep': self.model.schedule.steps,
+                                    })
+
             else:
                 # print(f"#######agent {self.resource} is free but time not within calendar")
+                # print(f"activity duration: {activity_duration}")
                 if last_possible_agent: # then increase timer by x seconds to try to get an available agent later
                     # move timestamp until agent is available again according to calendar
                     self.contractor_agent.case.current_timestamp = self.set_time_to_next_availability_when_not_in_calendar(current_timestamp, activity_duration)
@@ -150,6 +173,24 @@ class ResourceAgent(Agent):
         if new_time_set == False:
             self.contractor_agent.case.current_timestamp += pd.Timedelta(seconds=60)
             # print(f"moved time by 60 seconds")
+
+
+    def start_time_in_calendar(self, current_timestamp):
+        day_of_week = current_timestamp.strftime('%A').upper()
+        for entry in self.calendar:
+            if entry['from'] == day_of_week:
+                try:
+                    begin_time = datetime.strptime(entry['beginTime'], '%H:%M:%S')
+                except ValueError:
+                    # If the first format fails, try the second format '%H:%M:%S.%f'
+                    begin_time = datetime.strptime(entry['beginTime'], '%H:%M:%S.%f')
+
+                begin_time_current_activity = datetime.combine(current_timestamp.date(), current_timestamp.time())
+                begin_time_current_activity = begin_time_current_activity.time()
+
+                if begin_time.time() <= begin_time_current_activity:
+                    return True
+        return False
         
     def is_within_calendar(self, current_timestamp, activity_duration):
         """
@@ -269,3 +310,83 @@ class ResourceAgent(Agent):
             next_possible_timestamp = pd.Timestamp(next_possible_timestamp, tzinfo=pytz.UTC) #tz='UTC')
 
         return next_possible_timestamp
+    
+
+    def add_off_time_to_end_time(self, start_time, activity_duration):
+        """
+        Calculates the actual end time by adding unavailable periods to the activity duration.
+        
+        Args:
+            start_time (pd.Timestamp): The start time of the activity
+            activity_duration (float): The duration of the activity in seconds
+        
+        Returns:
+            pd.Timestamp: The end time including off-time periods
+        """
+        remaining_duration = activity_duration
+        current_time = start_time
+        
+        while remaining_duration > 0:
+            # Get the current day and time
+            current_day = current_time.strftime('%A').upper()
+            current_time_of_day = current_time.time()
+            
+            # Find working hours for the current day
+            working_hours = None
+            for entry in self.calendar:
+                if entry['from'] == current_day:
+                    try:
+                        begin_time = datetime.strptime(entry['beginTime'], '%H:%M:%S').time()
+                    except ValueError:
+                        begin_time = datetime.strptime(entry['beginTime'], '%H:%M:%S.%f').time()
+                    try:
+                        end_time = datetime.strptime(entry['endTime'], '%H:%M:%S').time()
+                    except ValueError:
+                        end_time = datetime.strptime(entry['endTime'], '%H:%M:%S.%f').time()
+                    working_hours = (begin_time, end_time)
+                    break
+            
+            if working_hours is None:
+                # No working hours today, move to next day at start time
+                current_time = current_time + pd.Timedelta(days=1)
+                current_time = current_time.replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+                continue
+            
+            begin_time, end_time = working_hours
+            
+            if current_time_of_day < begin_time:
+                # Before working hours, jump to beginning of working hours
+                current_time = current_time.replace(
+                    hour=begin_time.hour,
+                    minute=begin_time.minute,
+                    second=begin_time.second,
+                    microsecond=begin_time.microsecond
+                )
+            elif current_time_of_day >= end_time:
+                # After working hours, jump to next day
+                current_time = current_time + pd.Timedelta(days=1)
+                current_time = current_time.replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+            else:
+                # During working hours, process duration until end of working hours
+                time_until_end_of_day = (
+                    datetime.combine(current_time.date(), end_time) - 
+                    datetime.combine(current_time.date(), current_time_of_day)
+                ).total_seconds()
+                
+                duration_to_process = min(remaining_duration, time_until_end_of_day)
+                current_time += pd.Timedelta(seconds=duration_to_process)
+                remaining_duration -= duration_to_process
+                
+                if remaining_duration > 0 and current_time.time() >= end_time:
+                    # If we hit the end of working hours and still have duration left,
+                    # move to the next day
+                    current_time = current_time + pd.Timedelta(days=1)
+                    current_time = current_time.replace(
+                        hour=0, minute=0, second=0, microsecond=0
+                    )
+        
+        return current_time
