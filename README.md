@@ -32,7 +32,7 @@ The 10 simulated logs as well as train and test splits are then stored in the fo
 
 ## Evaluation
 The simulation results can be evaluated using the evaluation.ipynb notebook in the analysis_notebooks folder.
-The raw event logs as well as all simulated event logs for the 9 mentioned processes can be found in this [Google Drive folder](https://drive.google.com/file/d/1yLmzh-xktZ6OesBj8RcMvQhyY1uA5rB0/view?usp=sharing).
+The raw event logs as well as all simulated event logs for the 9 mentioned processes can be found in this [Google Drive folder](https://drive.google.com/file/d/10OcbxF9hSoiItb8zAb3W5oxKTiNkaXHg/view?usp=sharing).
 
 ## Additional Results 
 The following table complements the results mentioned in the paper and reports all six AgentSimulator configurations across all 9 processes and all metrics. The underlying simulated log files can also be found in the Google Drive folder.
