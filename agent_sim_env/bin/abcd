@@ -1,0 +1,3 @@
+#!/home/clinton/Documents/Studies/SE Engineering Class/Semester 2/3109 Business Process Re-Engineering/Assignments/AgentSimulator/agent_sim_env/bin/python3.11
+import snakes.utils.abcd.main as abcdmain
+abcdmain.main()
